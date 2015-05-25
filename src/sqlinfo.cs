@@ -37,19 +37,19 @@ namespace SQLinfo
 			{
 				switch(args[i].ToLower())
 				{
-					case "-server":
+					case "-s":
 						server = args[++i];
 						break;
-					case "-dbname":
+					case "-d":
 						dbname = args[++i];
 						break;
-					case "-userid":
+					case "-u":
 						userid = args[++i];
 						break;
-					case "-passwd":
+					case "-p":
 						passwd = args[++i];
 						break;
-					case "-timeout":
+					case "-t":
 						timeout = Int32.Parse(args[++i]);
 						break;
 					default:
