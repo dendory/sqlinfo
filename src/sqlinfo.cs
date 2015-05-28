@@ -52,8 +52,12 @@ namespace SQLinfo
 					case "-t":
 						timeout = Int32.Parse(args[++i]);
 						break;
+					case "-h":
+						Console.WriteLine("* Usage:\n\t sqlinfo -s <server> -d <database> -u <username> -p <password> -t <timeout>\n");
+						Environment.Exit(0);
+						break;
 					default:
-						Console.WriteLine("* Unknown option: " + args[i]);
+						Console.WriteLine("* Unknown option: " + args[i] + ". Try sqlinfo -h for help.");
 						break;
 				}
 			}
@@ -67,113 +71,155 @@ namespace SQLinfo
 			}
 			catch(Exception e)
 			{
-				Console.WriteLine("* Error connecting to server: " + e.Message);
+				Console.WriteLine("Error connecting to server: " + e.Message);
 				Environment.Exit(1);
 			}
 
 			// server version
-			sql = new SqlCommand();
-			sql.Connection = con;
-			sql.CommandType = CommandType.Text;
-			sql.CommandText = "SELECT @@version";
-			res = sql.ExecuteReader();
 			Console.Write("\n* Server version:\n");
-			while(res.Read())
+			try
 			{
-				Console.WriteLine(res[0]);
+				sql = new SqlCommand();
+				sql.Connection = con;
+				sql.CommandType = CommandType.Text;
+				sql.CommandText = "SELECT @@version";
+				res = sql.ExecuteReader();
+				while(res.Read())
+				{
+					Console.WriteLine(res[0]);
+				}
+				res.Close();
 			}
-			res.Close();
+			catch(Exception e)
+			{
+				Console.WriteLine("Error querying server: " + e.Message);
+			}
 			
 			// List databases
-			sql = new SqlCommand();
-			sql.Connection = con;
-			sql.CommandType = CommandType.StoredProcedure;
-			sql.CommandText = "sp_databases";
-			res = sql.ExecuteReader();
 			Console.WriteLine("\n* Server database names:");
-			while(res.Read())
+			try
 			{
-				Console.Write(res.GetString(0) + " ");
+				sql = new SqlCommand();
+				sql.Connection = con;
+				sql.CommandType = CommandType.StoredProcedure;
+				sql.CommandText = "sp_databases";
+				res = sql.ExecuteReader();
+				while(res.Read())
+				{
+					Console.Write(res.GetString(0) + " ");
+				}
+				Console.Write("\n");
+				res.Close();
 			}
-			Console.Write("\n");
-			res.Close();
+			catch(Exception e)
+			{
+				Console.WriteLine("Error querying server: " + e.Message);
+			}
 
 			// List logins
-			sql = new SqlCommand();
-			sql.Connection = con;
-			sql.CommandType = CommandType.Text;
-			sql.CommandText = "SELECT name,type,default_database_name FROM sys.server_principals";
-			res = sql.ExecuteReader();
 			Console.Write("\n* Server logins:\n");
-			Console.WriteLine(String.Format("{0,-44} {1,-8} {2,-20}", "Login name", "Type", "Default database"));
-			Console.WriteLine(String.Format("{0,-44} {1,-8} {2,-20}", "----------", "----", "----------------"));
-			while(res.Read())
+			try
 			{
-				switch(res[1].ToString())
+				sql = new SqlCommand();
+				sql.Connection = con;
+				sql.CommandType = CommandType.Text;
+				sql.CommandText = "SELECT name,type,default_database_name FROM sys.server_principals";
+				res = sql.ExecuteReader();
+				Console.WriteLine(String.Format("{0,-44} {1,-8} {2,-20}", "Login name", "Type", "Default database"));
+				Console.WriteLine(String.Format("{0,-44} {1,-8} {2,-20}", "----------", "----", "----------------"));
+				while(res.Read())
 				{
-					case "S":
-						tmp = "SQL";
-						break;
-					case "U":
-						tmp = "Windows";
-						break;
-					case "G":
-						tmp = "Group";
-						break;
-					case "R":
-						tmp = "Role";
-						break;
-					default:
-						tmp = "Mapped";
-						break;
+					switch(res[1].ToString())
+					{
+						case "S":
+							tmp = "SQL";
+							break;
+						case "U":
+							tmp = "Windows";
+							break;
+						case "G":
+							tmp = "Group";
+							break;
+						case "R":
+							tmp = "Role";
+							break;
+						default:
+							tmp = "Mapped";
+							break;
+					}
+					Console.WriteLine(String.Format("{0,-44} {1,-8} {2,-20}", res[0], tmp, res[2]));
 				}
-				Console.WriteLine(String.Format("{0,-44} {1,-8} {2,-20}", res[0], tmp, res[2]));
+				res.Close();
 			}
-			res.Close();
+			catch(Exception e)
+			{
+				Console.WriteLine("Error querying server: " + e.Message);
+			}
 
 			// Log info
-			sql = new SqlCommand();
-			sql.Connection = con;
-			sql.CommandType = CommandType.Text;
-			sql.CommandText = "DBCC SQLPERF(logspace)";
-			res = sql.ExecuteReader();
 			Console.Write("\n* Transaction logs size:\n");
-			Console.WriteLine(String.Format("{0,-20} {1,-15} {2,-16}", "Database name", "Log size (MB)", "Space used (%)"));
-			Console.WriteLine(String.Format("{0,-20} {1,-15} {2,-16}", "-------------", "-------------", "--------------"));
-			while(res.Read())
+			try
 			{
-				Console.WriteLine(String.Format("{0,-20} {1,-15} {2,-16}", res[0], res[1], res[2]));
+				sql = new SqlCommand();
+				sql.Connection = con;
+				sql.CommandType = CommandType.Text;
+				sql.CommandText = "DBCC SQLPERF(logspace)";
+				res = sql.ExecuteReader();
+				Console.WriteLine(String.Format("{0,-20} {1,-15} {2,-16}", "Database name", "Log size (MB)", "Space used (%)"));
+				Console.WriteLine(String.Format("{0,-20} {1,-15} {2,-16}", "-------------", "-------------", "--------------"));
+				while(res.Read())
+				{
+					Console.WriteLine(String.Format("{0,-20} {1,-15} {2,-16}", res[0], res[1], res[2]));
+				}
+				res.Close();
 			}
-			res.Close();
+			catch(Exception e)
+			{
+				Console.WriteLine("Error querying server: " + e.Message);
+			}
 
 			// db files
-			sql = new SqlCommand();
-			sql.Connection = con;
-			sql.CommandType = CommandType.Text;
-			sql.CommandText = "SELECT name,type_desc,physical_name FROM sys.database_files";
-			res = sql.ExecuteReader();
 			Console.Write("\n* Database files:\n");
-			Console.WriteLine(String.Format("{0,-20} {1,-6} {2,-30}", "Name", "Type", "Physical path"));
-			Console.WriteLine(String.Format("{0,-20} {1,-6} {2,-30}", "----", "----", "-------------"));
-			while(res.Read())
+			try
 			{
-				Console.WriteLine(String.Format("{0,-20} {1,-6} {2,-30}", res[0], res[1], res[2]));
+				sql = new SqlCommand();
+				sql.Connection = con;
+				sql.CommandType = CommandType.Text;
+				sql.CommandText = "SELECT name,type_desc,physical_name FROM sys.database_files";
+				res = sql.ExecuteReader();
+				Console.WriteLine(String.Format("{0,-20} {1,-6} {2,-30}", "Name", "Type", "Physical path"));
+				Console.WriteLine(String.Format("{0,-20} {1,-6} {2,-30}", "----", "----", "-------------"));
+				while(res.Read())
+				{
+					Console.WriteLine(String.Format("{0,-20} {1,-6} {2,-30}", res[0], res[1], res[2]));
+				}
+				res.Close();
 			}
-			res.Close();
+			catch(Exception e)
+			{
+				Console.WriteLine("Error querying server: " + e.Message);
+			}
 
 			// db tables
-			sql = new SqlCommand();
-			sql.Connection = con;
-			sql.CommandType = CommandType.Text;
-			sql.CommandText = "SELECT sobjects.name FROM sysobjects sobjects WHERE sobjects.xtype = 'U' ORDER BY name";
-			res = sql.ExecuteReader();
 			Console.Write("\n* Database tables:\n");
-			while(res.Read())
+			try
 			{
-				Console.Write(res[0] + " ");
+				sql = new SqlCommand();
+				sql.Connection = con;
+				sql.CommandType = CommandType.Text;
+				sql.CommandText = "SELECT sobjects.name FROM sysobjects sobjects WHERE sobjects.xtype = 'U' ORDER BY name";
+				res = sql.ExecuteReader();
+				while(res.Read())
+				{
+					Console.Write(res[0] + " ");
+				}
+				Console.Write("\n");
+				res.Close();
 			}
-			Console.Write("\n");
-			res.Close();
+			catch(Exception e)
+			{
+				Console.WriteLine("Error querying server: " + e.Message);
+			}
 
 			// Close connection
 			con.Close();
